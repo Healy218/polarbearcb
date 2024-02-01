@@ -46,3 +46,16 @@ def setup_chain():
     return chain
 
 agent = setup_chain
+
+@app.get("/")
+def read_root(request: Request):
+    return {"message": "Welcome to the PolarBear Chat Bot"}
+
+@app.post("/prompt")
+def process_prompt(prompt: str = Form(...)):
+    response = agent.run(prompt)
+    return {"response": response}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
