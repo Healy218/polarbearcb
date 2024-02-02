@@ -1,55 +1,53 @@
 import openai
 import uvicorn
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Form, Request
 from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatOpenAI
-from langchain.document_loaders import CSVLoader
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
+from langchain_community.document_loaders.csv_loader import CSVLoader
+from langchain_openai import OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
-from langchain.vectorstores import DocArrayInMemorySearch
+from langchain_community.vectorstores import DocArrayInMemorySearch
+from config import api_key as OPENAI_API_KEY  # Ensure this is correct
 
 app = FastAPI()
 
-#set your OpenAI key here
-
-OPENAI_API_KEY  = "your_api_key"
+#set your OpenAI API key here
+#OPEN_API_KEY = "key here"
 
 def setup_chain():
-    #define file path and template"
+    #Define file path and template
     file = 'Mental_Health_FAQ.csv'
-    template = """ #Template contents here """
+    template = "How you doin?"  # Replace with your template
 
-    #Intialize embeddings, loader, and prompt
-    embeddings = OpenAIEmbeddings()
+    #Initialize embeddings, loader, and prompt
+    embeddings = OpenAIEmbeddings(OPENAI_API_KEY)
     loader = CSVLoader(filepath=file, encoding='utf-8')
     docs = loader.load()
-    prompt = PromptTemplate(template=template, input_variables=docs)
+    prompt = PromptTemplate(template=template, input_variables=OPENAI_API_KEY)
 
     #Create DocArrayInMemorySearch and retriever
     db = DocArrayInMemorySearch.from_documents(docs, embeddings)
     retriever = db.as_retriever()
-    chaim_type_kwargs = {"prompt":prompt}
+    chain_type_kwargs={"prompt": prompt}
 
-    #initialize ChatOpenAI
-    llm = ChatOpenAI(
-        tempurature=0
-    )
+    #Initialize ChatOpenAI
+    llm = ChatOpenAI(temperature=0.7)
 
-    #Setup RetievalQA chain
+    #Setup RetrievalQA chain 
     chain = RetrievalQA.from_chain_type(
         llm=llm,
-        chain_type="stuff",
+        chain_type="stuff",  
         retriever=retriever,
         chain_type_kwargs=chain_type_kwargs,
         verbose=True
     )
     return chain
 
-agent = setup_chain
+agent = setup_chain()
 
 @app.get("/")
-def read_root(request: Request):
-    return {"message": "Welcome to the PolarBear Chat Bot"}
+def read_root():
+    return {"message": "Welcome to the Mental Health Chatbot"}
 
 @app.post("/prompt")
 def process_prompt(prompt: str = Form(...)):
@@ -58,4 +56,3 @@ def process_prompt(prompt: str = Form(...)):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-    
